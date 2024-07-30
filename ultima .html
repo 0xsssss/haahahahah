@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Rewards</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #000000;
+        }
+        h1, h2 {
+            color: #ffffff;
+            text-align: center;
+        }
+        .form-container, .task-list {
+            width: 100%;
+            max-width: 500px;
+            background-color: rgb(0, 0, 0);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: none;
+        }
+        .task {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #000000;
+        }
+        .task:last-child {
+            border-bottom: none;
+        }
+        .task-description {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 120px;
+        }
+        button:disabled {
+            background-color: #ddd;
+            cursor: not-allowed;
+        }
+        .verification {
+            font-size: 0.9em;
+            color: #666;
+            width: 120px;
+            text-align: center;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        #public-database {
+            margin-top: 20px;
+            width: 100%;
+            max-width: 500px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #ffffff;
+        }
+        .loading-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            color: #fff;
+            font-size: 24px;
+            z-index: 9999;
+        }
+        .hidden {
+            display: none;
+        }
+        .center-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-screen" id="loading-screen">
+        Task To Earn 🐵🔥...
+    </div>
+    <div class="center-content">
+        <h1>Complete Tasks, Earn Rewards!</h1>
+        <div class="form-container" id="form-container">
+            <img src="l.png" alt="Image" style="width: 100%; max-width: 500; margin-bottom: 20px;">
+            <input type="text" id="address-input" placeholder="Enter your address">
+            <button onclick="registerAddress()">Register</button>
+        </div>
+    </div>
+    <div class="task-list" id="task-list">
+        <div class="task">
+            <span class="task-description">Subscribe to Elon Musk on X.com</span>
+            <button onclick="startTask(0, 'https://twitter.com/elonmusk')">Start (50 pts)</button>
+            <span class="verification" id="verification0"></span>
+        </div>
+        <div class="task">
+            <span class="task-description">Follow SpaceX on Instagram</span>
+            <button onclick="startTask(1, 'https://www.instagram.com/spacex/')">Start (30 pts)</button>
+            <span class="verification" id="verification1"></span>
+        </div>
+        <div class="task">
+            <span class="task-description">Sign up for Starlink updates</span>
+            <button onclick="startTask(2, 'https://www.starlink.com/')">Start (20 pts)</button>
+            <span class="verification" id="verification2"></span>
+        </div>
+        <div class="task">
+            <span class="task-description">Watch a Tesla product reveal video</span>
+            <button onclick="startTask(3, 'https://www.youtube.com/user/teslamotors')">Start (40 pts)</button>
+            <span class="verification" id="verification3"></span>
+        </div>
+        <div class="task">
+            <span class="task-description">Read an article about Neuralink</span>
+            <button onclick="startTask(4, 'https://neuralink.com/blog/')">Start (25 pts)</button>
+            <span class="verification" id="verification4"></span>
+        </div>
+    </div>
+    <div id="public-database">
+        <h2>Public Database</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Address</th>
+                    <th>Points</th>
+                </tr>
+            </thead>
+            <tbody id="database-body">
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const whitelist = ['address1', 'address2', 'address3']; // Replace with actual addresses
+        let tasks = [
+            { points: 50, completed: false, timer: null, url: 'https://twitter.com/elonmusk' },
+            { points: 30, completed: false, timer: null, url: 'https://www.instagram.com/spacex/' },
+            { points: 20, completed: false, timer: null, url: 'https://www.starlink.com/' },
+            { points: 40, completed: false, timer: null, url: 'https://www.youtube.com/user/teslamotors' },
+            { points: 25, completed: false, timer: null, url: 'https://neuralink.com/blog/' }
+        ];
+        let publicDatabase = [];
+        let currentAddress = '';
+
+        window.onload = function() {
+            setTimeout(() => {
+                document.getElementById('loading-screen').classList.add('hidden');
+                document.getElementById('form-container').style.display = 'block';
+            }, 2000); // Duration of loading animation
+        }
+
+        function registerAddress() {
+            const address = document.getElementById('address-input').value.trim();
+            if (whitelist.includes(address)) {
+                currentAddress = address;
+                let existingEntry = publicDatabase.find(entry => entry.address === address);
+                if (!existingEntry) {
+                    publicDatabase.push({ address: address, points: 0 });
+                }
+                updatePublicDatabase();
+                document.getElementById('form-container').style.display = 'none';
+                document.getElementById('task-list').style.display = 'block';
+            } else {
+                alert('Address not in whitelist');
+            }
+        }
+
+        function startTask(index, url) {
+            if (!currentAddress) {
+                alert('Please register your address first');
+                return;
+            }
+            if (!tasks[index].completed && !tasks[index].timer) {
+                window.open(url, '_blank');
+                const button = document.querySelectorAll('button')[index + 1]; // +1 because of the register button
+                button.innerText = 'Check';
+                button.onclick = () => checkTask(index);
+            }
+        }
+
+        function checkTask(index) {
+            if (!tasks[index].completed && !tasks[index].timer) {
+                window.open(tasks[index].url, '_blank'); // Open the task URL in a new window
+                tasks[index].timer = setTimeout(() => completeTask(index), 10 * 1000); // 10 seconds
+                document.getElementById(`verification${index}`).textContent = 'verification...';
+                disableButton(index);
+            }
+        }
+
+        function completeTask(index) {
+            if (!tasks[index].completed) {
+                tasks[index].completed = true;
+                let dbEntry = publicDatabase.find(entry => entry.address === currentAddress);
+                if (dbEntry) {
+                    dbEntry.points += tasks[index].points;
+                    updatePublicDatabase();
+                }
+                document.querySelectorAll('button')[index + 1].innerText = 'Completed';
+                document.getElementById(`verification${index}`).textContent = 'Verified!';
+            }
+        }
+
+        function disableButton(index) {
+            const buttons = document.querySelectorAll('button');
+            buttons[index + 1].disabled = true;
+        }
+
+        function updatePublicDatabase() {
+            const tableBody = document.getElementById('database-body');
+            tableBody.innerHTML = '';
+            publicDatabase.forEach(entry => {
+                const row = tableBody.insertRow();
+                const cellAddress = row.insertCell(0);
+                const cellPoints = row.insertCell(1);
+                cellAddress.textContent = entry.address;
+                cellPoints.textContent = entry.points;
+            });
+        }
+    </script>
+</body>
+</html>
